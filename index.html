@@ -11,19 +11,18 @@
         body { font-family: 'Kanit', sans-serif; text-align: center; background-color: #0d1b2a; color: white; margin: 0; padding: 20px; }
         .container { max-width: 400px; margin: auto; background: #1b263b; padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        /* พื้นที่สำหรับรวมรูป (Hidden) */
         #capture-area {
             position: relative;
             width: 300px;
-            height: 360px; /* 1:1.2 Ratio */
+            height: 360px;
             margin: auto;
-            display: none; /* แสดงเฉพาะตอนกำลังประมวลผล */
+            display: none; 
         }
         #bg-img { width: 100%; height: 100%; object-fit: cover; }
         #profile-img {
             position: absolute;
-            top: 20px; /* ตาม JSON คุณ */
-            right: 160px; /* ตาม JSON คุณ (offsetEnd) */
+            top: 20px;
+            right: 160px; 
             width: 85px;
             height: 85px;
             border-radius: 50%;
@@ -33,9 +32,7 @@
         .preview-img { width: 100%; border-radius: 15px; margin-bottom: 20px; border: 2px solid #415a77; }
         .btn { padding: 15px; margin: 10px 0; border-radius: 15px; border: none; color: white; font-size: 16px; font-weight: 500; width: 100%; cursor: pointer; transition: 0.3s; }
         .btn-share { background-color: #06C755; }
-        .btn-share:hover { background-color: #05a647; }
         .btn-download { background-color: #e0e1dd; color: #1b263b; }
-        .btn-download:hover { background-color: #bdbeba; }
         #status { font-size: 14px; color: #778da9; margin-bottom: 10px; }
     </style>
 </head>
@@ -43,7 +40,7 @@
 
 <div class="container">
     <h2 style="margin-top:0;">Happy New Year 2026</h2>
-    <p id="status">กำลังโหลดโปรไฟล์ของคุณ...</p>
+    <p id="status">กำลังเข้าสู่ระบบและโหลดโปรไฟล์...</p>
     
     <div id="capture-area">
         <img id="bg-img" src="https://lh3.googleusercontent.com/d/1jduiSWXhb_P0wYl6s54LJOAp0Mfp82TU" crossorigin="anonymous">
@@ -54,34 +51,41 @@
         <img id="user-preview" class="preview-img" src="">
         <button class="btn btn-share" onclick="sendShare()">🚀 ส่งให้เพื่อน หรือ กลุ่ม</button>
         <button class="btn btn-download" onclick="downloadImage()">💾 บันทึกรูปภาพลงเครื่อง</button>
-        <p style="font-size: 12px; color: #778da9;">* หากกดบันทึกไม่ได้ ให้กดค้างที่รูปภาพแล้วเลือก 'บันทึกรูป'</p>
     </div>
 </div>
 
 <script>
-    const BG_PICTURE = "https://lh3.googleusercontent.com/d/1jduiSWXhb_P0wYl6s54LJOAp0Mfp82TU"; // URL ที่คุณให้มา
-    const urlParams = new URLSearchParams(window.location.search);
-    const userPic = urlParams.get('pic') || "https://www.w3schools.com/howto/img_avatar.png";
+    const BG_PICTURE = "https://lh3.googleusercontent.com/d/1jduiSWXhb_P0wYl6s54LJOAp0Mfp82TU";
+    let userProfilePic = ""; // ตัวแปรเก็บรูปโปรไฟล์ที่ได้จาก LINE Login
 
     async function main() {
         try {
-            // ใส่ LIFF ID ของคุณที่นี่
             await liff.init({ liffId: "2007125937-PPTr28Jp" }); 
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
-                renderPreview();
+                await fetchUserProfile(); // ดึงโปรไฟล์ทันทีที่ Login สำเร็จ
             }
         } catch (err) {
-            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการโหลด LIFF";
+            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการโหลด";
         }
     }
 
-    function renderPreview() {
-        document.getElementById('status').style.display = 'none';
-        document.getElementById('ui-ready').style.display = 'block';
-        document.getElementById('user-preview').src = userPic;
-        document.getElementById('profile-img').src = userPic;
+    // ฟังก์ชันดึงรูปโปรไฟล์โดยตรงจาก LINE SDK
+    async function fetchUserProfile() {
+        try {
+            const profile = await liff.getProfile();
+            userProfilePic = profile.pictureUrl; // ดึง URL รูปโปรไฟล์
+
+            // อัปเดต UI
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('ui-ready').style.display = 'block';
+            document.getElementById('user-preview').src = userProfilePic;
+            document.getElementById('profile-img').src = userProfilePic;
+        } catch (err) {
+            console.error("Error fetching profile:", err);
+            document.getElementById('status').innerText = "ไม่สามารถดึงรูปโปรไฟล์ได้";
+        }
     }
 
     function sendShare() {
@@ -114,7 +118,7 @@
                                 "contents": [
                                     {
                                         "type": "image",
-                                        "url": userPic,
+                                        "url": userProfilePic, // ใช้รูปที่ได้จาก Login
                                         "size": "full",
                                         "aspectMode": "cover"
                                     }
@@ -138,25 +142,22 @@
 
     function downloadImage() {
         const area = document.getElementById('capture-area');
-        area.style.display = 'block'; // แสดงชั่วคราวเพื่อเรนเดอร์
+        area.style.display = 'block';
 
         html2canvas(area, { 
             useCORS: true,
             allowTaint: true,
-            scale: 2 // เพิ่มความชัด
+            scale: 2 
         }).then(canvas => {
             const base64image = canvas.toDataURL("image/png");
-            // อัปเดตรูป Preview ให้เป็นรูปที่รวมแล้ว เพื่อให้ผู้ใช้กดค้างเซฟได้ง่ายขึ้นด้วย
             document.getElementById('user-preview').src = base64image;
             
-            // สั่งดาวน์โหลดอัตโนมัติ (สำหรับเบราว์เซอร์ทั่วไป)
             const link = document.createElement('a');
             link.download = 'HNY2026.png';
             link.href = base64image;
             link.click();
             
             area.style.display = 'none';
-            alert("เตรียมรูปภาพสำเร็จ! หากรูปไม่เซฟลงเครื่องอัตโนมัติ ให้กดค้างที่รูปภาพเพื่อบันทึก");
         });
     }
 
